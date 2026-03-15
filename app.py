@@ -1,11 +1,8 @@
- import streamlit as st
+import streamlit as st
 import google.generativeai as genai
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="DocSwift IA - Inteligência Legal",
-    page_icon="??",
-    layout="wide"
+st.set_page_config(page_title="DocSwift IA", page_icon="⚖️", layout="wide")
 )
 
 # --- CONFIGURAÇÃO DE SEGURANÇA (API KEY) ---
