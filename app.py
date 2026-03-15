@@ -105,6 +105,4 @@ with col2:
                     st.error(f"Erro ao processar: {e}")
         else:
             st.warning("Por favor, forneça um texto ou arquivo para iniciar.")
-
-st.markdown("---")
 st.caption("Aviso: O DocSwift é uma ferramenta de suporte. Consulte sempre um advogado para decisões judiciais.")
