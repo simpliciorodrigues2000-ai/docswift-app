@@ -3,7 +3,6 @@ import google.generativeai as genai
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="DocSwift IA", page_icon="⚖️", layout="wide")
-)
 
 # --- CONFIGURAÇÃO DE SEGURANÇA (API KEY) ---
 if "GOOGLE_API_KEY" in st.secrets:
