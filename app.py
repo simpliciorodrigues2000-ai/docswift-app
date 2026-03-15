@@ -1,55 +1,83 @@
 import streamlit as st
+import google.generativeai as genai
 import os
 import json
-import google.generativeai as genai
 
+# -------------------------------------------------
+# CONFIGURAÇÃO DA PÁGINA
+# -------------------------------------------------
+
+st.set_page_config(
+    page_title="DocSwift IA Jurídica",
+    page_icon="⚖️",
+    layout="wide"
+)
+
+st.title("⚖️ DocSwift - Assistente Jurídico com IA")
+
+# -------------------------------------------------
 # CONFIGURAR API
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+# -------------------------------------------------
+
+api_key = st.secrets.get("GOOGLE_API_KEY")
+
+if not api_key:
+    st.error("⚠️ API KEY não encontrada no Streamlit Secrets.")
+    st.stop()
+
+genai.configure(api_key=api_key)
+
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-st.set_page_config(page_title="DocSwift Jurídico", layout="wide")
-
-st.title("⚖️ DocSwift IA Jurídica")
-
-# ---------------------------------------------------
+# -------------------------------------------------
 # CARREGAR LEGISLAÇÃO
-# ---------------------------------------------------
+# -------------------------------------------------
 
-@st.cache_data
+@st.cache_resource
 def carregar_legislacao():
 
     pasta = "database/legislacao"
+
     textos = []
+
+    if not os.path.exists(pasta):
+        return ""
 
     for arquivo in os.listdir(pasta):
 
-        with open(os.path.join(pasta, arquivo), "r", encoding="utf-8") as f:
+        caminho = os.path.join(pasta, arquivo)
+
+        with open(caminho, "r", encoding="utf-8") as f:
             textos.append(f.read())
 
     return "\n".join(textos)
 
-
-# ---------------------------------------------------
+# -------------------------------------------------
 # CARREGAR JURISPRUDÊNCIA
-# ---------------------------------------------------
+# -------------------------------------------------
 
-@st.cache_data
+@st.cache_resource
 def carregar_jurisprudencia():
 
     base = []
 
-    with open("database/jurisprudencia/stf.json", encoding="utf-8") as f:
-        base.extend(json.load(f))
+    try:
+        with open("database/jurisprudencia/stf.json", encoding="utf-8") as f:
+            base.extend(json.load(f))
+    except:
+        pass
 
-    with open("database/jurisprudencia/stj.json", encoding="utf-8") as f:
-        base.extend(json.load(f))
+    try:
+        with open("database/jurisprudencia/stj.json", encoding="utf-8") as f:
+            base.extend(json.load(f))
+    except:
+        pass
 
     return base
 
-
-# ---------------------------------------------------
-# BUSCAR TRECHOS RELEVANTES
-# ---------------------------------------------------
+# -------------------------------------------------
+# BUSCAR CONTEXTO LEGAL
+# -------------------------------------------------
 
 def buscar_contexto(texto, pergunta):
 
@@ -62,11 +90,13 @@ def buscar_contexto(texto, pergunta):
         for palavra in palavras:
 
             if palavra in linha.lower():
-
                 resultados.append(linha)
 
-    return "\n".join(resultados[:30])
+    return "\n".join(resultados[:25])
 
+# -------------------------------------------------
+# BUSCAR JURISPRUDÊNCIA
+# -------------------------------------------------
 
 def buscar_jurisprudencia(base, pergunta):
 
@@ -77,42 +107,81 @@ def buscar_jurisprudencia(base, pergunta):
         if item["tema"].lower() in pergunta.lower():
 
             resultados.append(
-                f'{item["tribunal"]} - {item["tese"]} ({item["fonte"]})'
+                f'{item["tribunal"]}: {item["tese"]} ({item["fonte"]})'
             )
 
     return "\n".join(resultados)
 
+# -------------------------------------------------
+# CARREGAR BASES
+# -------------------------------------------------
 
-# ---------------------------------------------------
+leis = carregar_legislacao()
+juris = carregar_jurisprudencia()
+
+# -------------------------------------------------
 # INTERFACE
-# ---------------------------------------------------
+# -------------------------------------------------
 
-pergunta = st.text_area("Digite sua pergunta jurídica:")
+pergunta = st.text_area(
+    "Digite sua pergunta jurídica ou cole seu caso:",
+    height=200
+)
 
-if st.button("Analisar"):
+btn = st.button("Gerar Parecer")
 
-    leis = carregar_legislacao()
-    juris = carregar_jurisprudencia()
+# -------------------------------------------------
+# PROCESSAMENTO
+# -------------------------------------------------
 
-    contexto_legal = buscar_contexto(leis, pergunta)
-    contexto_juris = buscar_jurisprudencia(juris, pergunta)
+if btn and pergunta:
 
-    prompt = f"""
-    Você é um jurista especialista em direito brasileiro.
+    with st.spinner("Analisando legislação e jurisprudência..."):
 
-    LEGISLAÇÃO RELEVANTE:
-    {contexto_legal}
+        contexto_lei = buscar_contexto(leis, pergunta)
 
-    JURISPRUDÊNCIA:
-    {contexto_juris}
+        contexto_juris = buscar_jurisprudencia(juris, pergunta)
 
-    PERGUNTA:
-    {pergunta}
+        prompt = f"""
+        Você é um jurista especialista em direito brasileiro.
 
-    Elabore uma análise jurídica fundamentada.
-    """
+        Analise o caso abaixo.
 
-    resposta = model.generate_content(prompt)
+        LEGISLAÇÃO RELEVANTE
+        {contexto_lei}
 
-    st.subheader("Parecer Jurídico")
-    st.write(resposta.text)
+        JURISPRUDÊNCIA
+        {contexto_juris}
+
+        CASO DO USUÁRIO
+        {pergunta}
+
+        Estruture a resposta com:
+
+        1 - análise jurídica
+        2 - enquadramento legal
+        3 - jurisprudência aplicável
+        4 - conclusão
+        """
+
+        resposta = model.generate_content(prompt)
+
+        st.subheader("📄 Parecer Jurídico")
+
+        st.write(resposta.text)
+
+        st.download_button(
+            "📥 Baixar parecer",
+            resposta.text,
+            file_name="parecer_juridico.txt"
+        )
+
+elif btn:
+    st.warning("Digite uma pergunta ou caso jurídico.")
+
+# -------------------------------------------------
+# RODAPÉ
+# -------------------------------------------------
+
+st.markdown("---")
+st.caption("DocSwift IA Jurídica • 2026")
