@@ -2,67 +2,72 @@ import streamlit as st
 import google.generativeai as genai
 
 # 1. CONFIGURAÇÃO DE ALTA PERFORMANCE
-st.set_page_config(page_title="DocSwift PRO - Inteligência Jurídica", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="DocSwift PRO", page_icon="🛡️", layout="wide")
 
-# CSS Avançado para Persuasão Visual
+# CSS para manter o visual VIP
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
     .stApp { background-color: #0e1117; color: #ffffff; }
     .stButton>button {
         background: linear-gradient(45deg, #b8860b, #daa520);
         color: white; border: none; font-weight: bold; height: 3.5em;
-        transition: 0.3s; box-shadow: 0px 4px 15px rgba(218, 165, 32, 0.4);
+        border-radius: 8px;
     }
-    .stButton>button:hover { transform: translateY(-2px); box-shadow: 0px 6px 20px rgba(218, 165, 32, 0.6); }
-    .status-box { padding: 20px; border-radius: 10px; background-color: #1e2130; border-left: 5px solid #daa520; }
+    .status-box { padding: 15px; border-radius: 10px; background-color: #1e2130; border-left: 5px solid #daa520; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXÃO COM A IA
+# 2. CONEXÃO COM A IA (FLASH MODE)
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
     st.error("Chave de API ausente.")
 
-model = genai.GenerativeModel('gemini-1.5-pro')
+# Trocado para o modelo FLASH para maior velocidade
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 3. BARRA LATERAL ESTRATÉGICA
+# 3. BARRA LATERAL
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3665/3665910.png", width=80)
     st.title("DocSwift PRO")
-    st.markdown("---")
-    nicho = st.selectbox("Selecione o Foco da Análise:", ["Concursos (PMPR/Polícia)", "Direito do Consumidor", "Contratos/Imobiliário"])
-    st.warning("⚠️ **Atenção:** Prazos recursais são fatais.")
+    nicho = st.selectbox("Área:", ["Concursos (PMPR/Polícia)", "Direito do Consumidor", "Geral"])
     st.divider()
-    st.info("Algoritmo ajustado para Informativos do STF/STJ 2026.")
+    st.info("Modo Turbo Ativado: Respostas em tempo real.")
 
 # 4. TELA PRINCIPAL
-st.title("⚖️ DocSwift: Análise Legal Estratégica")
-st.markdown(f"**Inteligência Ativa:** Especialista em {nicho}")
+st.title("⚖️ DocSwift: Análise Estratégica")
 
 col1, col2 = st.columns([1, 1.2], gap="large")
 
 with col1:
-    st.markdown('<div class="status-box"><b>Passo 1:</b> Insira o relato do caso para encontrar ilegalidades.</div>', unsafe_allow_html=True)
-    st.write("")
-    relato = st.text_area("Descreva o problema aqui:", height=400, placeholder="Ex: Descreva aqui o motivo da inaptidão...")
-    analisar = st.button("⚖️ EXECUTAR ANÁLISE DE IMPACTO")
+    st.markdown('<div class="status-box"><b>Entrada de Dados:</b></div>', unsafe_allow_html=True)
+    relato = st.text_area("Descreva o caso:", height=300, placeholder="Ex: Fui considerado inapto...")
+    analisar = st.button("⚖️ EXECUTAR ANÁLISE RÁPIDA")
 
 with col2:
     if analisar and relato:
-        with st.spinner("⚖️ Cruzando dados legais..."):
+        # Espaço reservado para a resposta em tempo real
+        placeholder = st.empty()
+        full_response = ""
+        
+        with st.spinner("⚡ Processando instantaneamente..."):
             try:
-                prompt = f"Aja como um advogado consultor de elite em {nicho}. Analise o caso: {relato}"
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-                st.download_button("📥 Baixar Recurso Estratégico", data=response.text, file_name="defesa_docswift.txt")
+                prompt = f"Como consultor em {nicho}, analise rapidamente: {relato}. Estruture em: Fatos, Base Legal e Minuta de Recurso."
+                
+                # MODO STREAMING: A IA escreve enquanto pensa
+                response = model.generate_content(prompt, stream=True)
+                
+                for chunk in response:
+                    full_response += chunk.text
+                    placeholder.markdown(full_response + "▌")
+                
+                placeholder.markdown(full_response) # Finaliza sem o cursor
+                
+                st.download_button("📥 Baixar Defesa", data=full_response, file_name="defesa_docswift.txt")
             except Exception as e:
                 st.error(f"Erro: {e}")
     else:
-        st.info("Aguardando inserção de dados para iniciar a perícia digital.")
+        st.info("Aguardando dados.")
 
-# 5. RODAPÉ (NOME ALTERADO)
+# 5. RODAPÉ (NOME REDUZIDO)
 st.markdown("---")
-st.markdown(f"<center><b>Consultoria Desenvolvida por Rodrigues do Nascimento Filho</b><br>DocSwift IA © 2026 - Tecnologia de Ponta para Defesa do Cidadão</center>", unsafe_allow_html=True)
+st.markdown(f"<center><b>Consultoria Desenvolvida por Rodrigues do Nascimento Filho</b><br>DocSwift IA © 2026</center>", unsafe_allow_html=True)
