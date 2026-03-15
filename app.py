@@ -1,108 +1,68 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="DocSwift IA", page_icon="⚖️", layout="wide")
+# 1. CONFIGURAÇÃO DE ALTA PERFORMANCE
+st.set_page_config(page_title="DocSwift PRO - Inteligência Jurídica", page_icon="🛡️", layout="wide")
 
-# --- CONFIGURAÇÃO DE SEGURANÇA (API KEY) ---
-if "GOOGLE_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-else:
-    st.error("Erro: Chave de API não configurada nos Secrets do Streamlit.")
-
-model = genai.GenerativeModel('gemini-1.5-pro')
-
-# --- ESTILIZAÇÃO CUSTOMIZADA ---
+# CSS Avançado para Persuasão Visual
 st.markdown("""
     <style>
-    .main {
-        background-color: #f5f7f9;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
+    .stApp { background-color: #0e1117; color: #ffffff; }
     .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #004a99;
-        color: white;
+        background: linear-gradient(45deg, #b8860b, #daa520);
+        color: white; border: none; font-weight: bold; height: 3.5em;
+        transition: 0.3s; box-shadow: 0px 4px 15px rgba(218, 165, 32, 0.4);
     }
+    .stButton>button:hover { transform: translateY(-2px); box-shadow: 0px 6px 20px rgba(218, 165, 32, 0.6); }
+    .status-box { padding: 20px; border-radius: 10px; background-color: #1e2130; border-left: 5px solid #daa520; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIDEBAR (MENU LATERAL) ---
+# 2. CONEXÃO COM A IA
+if "GOOGLE_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+else:
+    st.error("Chave de API ausente.")
+
+model = genai.GenerativeModel('gemini-1.5-pro')
+
+# 3. BARRA LATERAL ESTRATÉGICA
 with st.sidebar:
-    st.title("🛡️ DocSwift")
-    st.caption("Versão 1.0 - Compliance & Defesa")
+    st.image("https://cdn-icons-png.flaticon.com/512/3665/3665910.png", width=80)
+    st.title("DocSwift PRO")
+    st.markdown("---")
+    nicho = st.selectbox("Selecione o Foco da Análise:", ["Concursos (PMPR/Polícia)", "Direito do Consumidor", "Contratos/Imobiliário"])
+    st.warning("⚠️ **Atenção:** Prazos recursais são fatais.")
     st.divider()
-    
-    categoria = st.selectbox(
-        "Selecione o nicho de análise:",
-        ["Concursos Públicos", "Direito do Consumidor", "Imobiliário/Contratos", "Defesa Administrativa Geral"]
-    )
-    
-    st.divider()
-    st.info("Sincronizado com: Portal do Planalto & Dizer o Direito (2026)")
+    st.info("Algoritmo ajustado para Informativos do STF/STJ 2026.")
 
-# --- LÓGICA DE CONTEXTO POR CATEGORIA ---
-instrucoes_nicho = {
-    "Concursos Públicos": "Foque em editais, razoabilidade, proporcionalidade e informativos do Dizer o Direito sobre concursos (STJ/STF).",
-    "Direito do Consumidor": "Foque no Código de Defesa do Consumidor (CDC), cláusulas abusivas e responsabilidade civil.",
-    "Imobiliário/Contratos": "Foque na Lei do Inquilinato, Código Civil e equilíbrio nas relações contratuais.",
-    "Defesa Administrativa Geral": "Foque no devido processo legal, contraditório, ampla defesa e legislação do Planalto."
-}
-
-# --- TELA PRINCIPAL ---
+# 4. TELA PRINCIPAL
 st.title("⚖️ DocSwift: Análise Legal Estratégica")
-st.write(f"**Categoria Ativa:** {categoria}")
-st.markdown("---")
+st.markdown(f"**Inteligência Ativa:** Especialista em {nicho}")
 
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns([1, 1.2], gap="large")
 
 with col1:
-    st.subheader("📥 Dados para Análise")
-    # CORREÇÃO AQUI: Adicionado parêntese e fechamento correto
-    texto_usuario = st.text_area(
-        "Cole o trecho do documento ou descreva o problema abaixo:",
-        placeholder="Ex: Fui reprovado no exame de visão da PMPR mesmo usando lentes...",
-        height=300
-    )
-    
-    arquivo = st.file_uploader("Ou envie o arquivo (PDF/Imagem)", type=['pdf', 'png', 'jpg'])
+    st.markdown('<div class="status-box"><b>Passo 1:</b> Insira o relato do caso para encontrar ilegalidades.</div>', unsafe_allow_html=True)
+    st.write("")
+    relato = st.text_area("Descreva o problema aqui:", height=400, placeholder="Ex: Descreva aqui o motivo da inaptidão...")
+    analisar = st.button("⚖️ EXECUTAR ANÁLISE DE IMPACTO")
 
 with col2:
-    st.subheader("🔍 Veredito da Inteligência")
-    
-    if st.button("Executar Análise Profissional"):
-        if texto_usuario or arquivo:
-            with st.spinner("Consultando bases legais e jurisprudência..."):
-                
-                prompt_mestre = f"""
-                CONTEXTO: {instrucoes_nicho[categoria]}
-                TAREFA: Você é o DocSwift Engine. Analise o documento/relato abaixo confrontando-o com o Portal do Planalto e o site Dizer o Direito.
-                
-                DOCUMENTO DO USUÁRIO: {texto_usuario}
-                
-                ESTRUTURA DA RESPOSTA:
-                1. RESUMO DOS FATOS: O que está acontecendo.
-                2. ANÁLISE LEGAL (PLANALTO): Quais leis se aplicam.
-                3. JURISPRUDÊNCIA (DIZER O DIREITO): Como os tribunais decidem casos assim.
-                4. CONCLUSÃO E RISCOS: O documento é ilegal ou válido?
-                5. MINUTA DE SOLUÇÃO: Escreva um rascunho de recurso ou resposta técnica.
-                
-                REGRAS: Seja formal. Não invente leis. Cite informativos reais se disponíveis.
-                """
-                
-                try:
-                    response = model.generate_content(prompt_mestre)
-                    st.markdown(response.text)
-                    
-                    st.download_button(
-                        label="📥 Baixar Documento de Defesa",
-                        data=response.text,
-                        file_name=f"analise_docswift_{categoria.lower()}.txt",
-                        mime="text/plain"
-                    )
-                except Exception as e:
-                    st.error(f"Erro ao processar: {e}")
-        else:
-            st.warning("Por favor, forneça um texto ou arquivo para iniciar.")
-st.caption("Aviso: O DocSwift é uma ferramenta de suporte. Consulte sempre um advogado para decisões judiciais.")
+    if analisar and relato:
+        with st.spinner("⚖️ Cruzando dados legais..."):
+            try:
+                prompt = f"Aja como um advogado consultor de elite em {nicho}. Analise o caso: {relato}"
+                response = model.generate_content(prompt)
+                st.markdown(response.text)
+                st.download_button("📥 Baixar Recurso Estratégico", data=response.text, file_name="defesa_docswift.txt")
+            except Exception as e:
+                st.error(f"Erro: {e}")
+    else:
+        st.info("Aguardando inserção de dados para iniciar a perícia digital.")
+
+# 5. RODAPÉ (NOME ALTERADO)
+st.markdown("---")
+st.markdown(f"<center><b>Consultoria Desenvolvida por Rodrigues do Nascimento Filho</b><br>DocSwift IA © 2026 - Tecnologia de Ponta para Defesa do Cidadão</center>", unsafe_allow_html=True)
