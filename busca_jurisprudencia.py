@@ -1,25 +1,16 @@
 import requests
-from bs4 import BeautifulSoup
 
-def buscar_legislacao(tema):
-
-    url = f"https://www.planalto.gov.br/busca/?q={tema}"
+def buscar_jurisprudencia(tema):
 
     try:
+        url = f"https://jurisprudencia.stj.jus.br/api/search?q={tema}"
+
         r = requests.get(url, timeout=5)
 
-        soup = BeautifulSoup(r.text, "html.parser")
+        if r.status_code == 200:
+            return r.text[:2000]
 
-        resultados = []
-
-        for link in soup.find_all("a", href=True)[:5]:
-            texto = link.text.strip()
-            href = link["href"]
-
-            if texto:
-                resultados.append(f"{texto} - {href}")
-
-        return "\n".join(resultados)
+        return "Jurisprudência não encontrada."
 
     except:
-        return "Não foi possível encontrar legislação."
+        return "Erro ao buscar jurisprudência."
