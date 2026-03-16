@@ -1,13 +1,25 @@
-def buscar_jurisprudencia(tema):
+import requests
+from bs4 import BeautifulSoup
 
-    return f"""
-Possíveis entendimentos jurisprudenciais sobre {tema}:
+def buscar_legislacao(tema):
 
-STJ:
-A jurisprudência entende que atos administrativos devem respeitar
-os princípios da legalidade e razoabilidade.
+    url = f"https://www.planalto.gov.br/busca/?q={tema}"
 
-STF:
-O controle judicial é possível quando há violação de direitos
-fundamentais ou ilegalidade administrativa.
-"""
+    try:
+        r = requests.get(url, timeout=5)
+
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        resultados = []
+
+        for link in soup.find_all("a", href=True)[:5]:
+            texto = link.text.strip()
+            href = link["href"]
+
+            if texto:
+                resultados.append(f"{texto} - {href}")
+
+        return "\n".join(resultados)
+
+    except:
+        return "Não foi possível encontrar legislação."
