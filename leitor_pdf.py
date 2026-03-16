@@ -1,13 +1,30 @@
-import PyPDF2
+import requests
+import streamlit as st
 
-def ler_pdf(arquivo):
+HF_API_KEY = st.secrets["HF_API_KEY"]
 
-    texto = ""
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}"
+}
 
-    reader = PyPDF2.PdfReader(arquivo)
+MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
-    for pagina in reader.pages:
 
-        texto += pagina.extract_text()
+def gerar_parecer(prompt):
 
-    return texto
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 700,
+            "temperature": 0.2
+        }
+    }
+
+    response = requests.post(MODEL_URL, headers=headers, json=payload)
+
+    data = response.json()
+
+    try:
+        return data[0]["generated_text"]
+    except:
+        return str(data)
