@@ -1,9 +1,10 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
+import time
 
-from busca_legislacao import buscar_legislacao
-from busca_jurisprudencia import buscar_jurisprudencia
-from leitor_pdf import ler_pdf
+# -----------------------------
+# CONFIGURAÇÃO
+# -----------------------------
 
 st.set_page_config(
     page_title="DocSwift IA Jurídica",
@@ -13,66 +14,107 @@ st.set_page_config(
 
 st.title("⚖️ DocSwift IA Jurídica")
 
-st.write("Assistente jurídico inteligente.")
+st.write("Assistente jurídico com busca real de legislação e jurisprudência.")
 
-# API
-try:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-except:
-    st.error("Configure sua API KEY no Secrets.")
-    st.stop()
+HF_API_KEY = st.secrets["HF_API_KEY"]
 
-genai.configure(api_key=api_key)
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}"
+}
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
-# INPUT CASO
-caso = st.text_area(
-    "Descreva o caso jurídico:",
-    height=200
-)
+# -----------------------------
+# CACHE PARA VELOCIDADE
+# -----------------------------
 
-# UPLOAD PDF
-pdf = st.file_uploader(
-    "Enviar edital ou documento (PDF)",
-    type=["pdf"]
-)
+@st.cache_data(ttl=3600)
+def buscar_legislacao(tema):
 
-texto_pdf = ""
+    url = f"https://www.planalto.gov.br/busca/?q={tema}"
 
-if pdf:
+    try:
+        r = requests.get(url, timeout=5)
+        return r.text[:2000]
+    except:
+        return "Legislação não encontrada."
 
-    texto_pdf = ler_pdf(pdf)
 
-    st.success("PDF carregado.")
+@st.cache_data(ttl=3600)
+def buscar_jurisprudencia(tema):
 
-# BOTÃO
-if st.button("Analisar caso"):
+    try:
+        url = f"https://jurisprudencia.stj.jus.br/api/search?q={tema}"
+        r = requests.get(url, timeout=5)
 
-    if not caso:
+        if r.status_code == 200:
+            return r.text[:2000]
 
-        st.warning("Digite o caso.")
+        return "Jurisprudência não encontrada."
 
-    else:
+    except:
+        return "Erro na busca de jurisprudência."
+
+
+@st.cache_data(ttl=3600)
+def gerar_parecer(prompt):
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 700,
+            "temperature": 0.2
+        }
+    }
+
+    response = requests.post(MODEL_URL, headers=headers, json=payload)
+
+    if response.status_code != 200:
+        return "Erro na geração de parecer."
+
+    data = response.json()
+
+    try:
+        return data[0]["generated_text"]
+    except:
+        return str(data)
+
+# -----------------------------
+# INTERFACE
+# -----------------------------
+
+tab1, tab2, tab3 = st.tabs([
+    "⚖️ Parecer Jurídico",
+    "📚 Jurisprudência",
+    "📑 Legislação"
+])
+
+# -----------------------------
+# PARECER
+# -----------------------------
+
+with tab1:
+
+    pergunta = st.text_area("Descreva o caso jurídico:", height=200)
+
+    if st.button("Gerar parecer"):
 
         with st.spinner("Buscando legislação..."):
 
-            legislacao = buscar_legislacao(caso)
+            legislacao = buscar_legislacao(pergunta)
 
         with st.spinner("Buscando jurisprudência..."):
 
-            jurisprudencia = buscar_jurisprudencia(caso)
+            jurisprudencia = buscar_jurisprudencia(pergunta)
 
-        with st.spinner("Gerando parecer..."):
+        prompt = f"""
 
-            prompt = f"""
 Você é um jurista especialista em direito brasileiro.
 
-CASO:
-{caso}
+Utilize APENAS as fontes fornecidas.
 
-DOCUMENTO ANALISADO:
-{texto_pdf}
+CASO:
+{pergunta}
 
 LEGISLAÇÃO:
 {legislacao}
@@ -80,23 +122,60 @@ LEGISLAÇÃO:
 JURISPRUDÊNCIA:
 {jurisprudencia}
 
-Elabore um parecer jurídico completo contendo:
+Estruture o parecer em:
 
-1. análise dos fatos
-2. enquadramento legal
-3. jurisprudência relevante
-4. possibilidade de recurso
+1. síntese dos fatos
+2. enquadramento jurídico
+3. dispositivos legais aplicáveis
+4. jurisprudência relevante
 5. conclusão jurídica
 """
 
-            resposta = model.generate_content(prompt)
+        with st.spinner("Gerando parecer..."):
 
-        st.subheader("Parecer Jurídico")
+            resposta = gerar_parecer(prompt)
 
-        st.write(resposta.text)
+        st.subheader("📄 Parecer Jurídico")
 
-        st.download_button(
-            "Baixar parecer",
-            resposta.text,
-            file_name="parecer_docswift.txt"
-        )
+        st.write(resposta)
+
+# -----------------------------
+# JURISPRUDÊNCIA
+# -----------------------------
+
+with tab2:
+
+    tema = st.text_input("Tema jurídico")
+
+    if st.button("Buscar jurisprudência"):
+
+        resultado = buscar_jurisprudencia(tema)
+
+        st.write(resultado)
+
+# -----------------------------
+# LEGISLAÇÃO
+# -----------------------------
+
+with tab3:
+
+    tema = st.text_input("Pesquisar legislação")
+
+    if st.button("Buscar legislação"):
+
+        resultado = buscar_legislacao(tema)
+
+        st.write(resultado)
+
+# -----------------------------
+# RODAPÉ
+# -----------------------------
+
+st.markdown("---")
+
+st.markdown(
+"""
+⚖️ DocSwift IA Jurídica • 2026  
+Assistente jurídico baseado em IA
+"""
+)
