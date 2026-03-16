@@ -1,8 +1,9 @@
 import streamlit as st
+from openai import OpenAI
 
 from busca_legislacao import buscar_legislacao
 from busca_jurisprudencia import buscar_jurisprudencia
-from analise_ia import gerar_parecer
+from gerador_pecas import gerar_peca
 
 st.set_page_config(
     page_title="DocSwift IA Jurídica",
@@ -12,84 +13,89 @@ st.set_page_config(
 
 st.title("⚖️ DocSwift IA Jurídica")
 
-st.write("Assistente jurídico com inteligência artificial e fontes reais.")
+# API
+try:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+except:
+    st.error("API KEY não encontrada.")
+    st.stop()
 
-# --------------------
+pergunta = st.text_area(
+    "Descreva seu caso jurídico:",
+    height=200
+)
 
-tab1, tab2, tab3 = st.tabs([
-    "⚖️ Parecer Jurídico",
-    "📚 Jurisprudência",
-    "📑 Legislação"
-])
+tipo = st.selectbox(
+    "Tipo de resposta",
+    ["parecer", "denuncia", "habeas corpus"]
+)
 
-# --------------------
-# PARECER
-# --------------------
+if st.button("Analisar"):
 
-with tab1:
+    if not pergunta:
+        st.warning("Digite uma pergunta.")
+        st.stop()
 
-    caso = st.text_area("Descreva o caso jurídico:", height=200)
+    # legislação
+    st.subheader("📑 Legislação")
 
-    if st.button("Gerar parecer jurídico"):
+    legislacao = buscar_legislacao(pergunta)
 
-        with st.spinner("Buscando legislação..."):
-            legislacao = buscar_legislacao(caso)
+    st.write(legislacao)
 
-        with st.spinner("Buscando jurisprudência..."):
-            jurisprudencia = buscar_jurisprudencia(caso)
+    # jurisprudência
+    st.subheader("📚 Jurisprudência")
 
-        prompt = f"""
-Você é um jurista especialista em direito brasileiro.
+    jurisprudencia = buscar_jurisprudencia(pergunta)
 
-CASO:
-{caso}
+    st.write(jurisprudencia)
 
-LEGISLAÇÃO:
-{legislacao}
+    # peça jurídica
+    if tipo != "parecer":
 
-JURISPRUDÊNCIA:
-{jurisprudencia}
+        st.subheader("📄 Peça Jurídica")
 
-Produza um parecer com:
+        peca = gerar_peca(tipo, pergunta)
 
-1. síntese dos fatos
-2. enquadramento jurídico
-3. dispositivos legais
-4. jurisprudência relevante
-5. conclusão jurídica
-"""
+        st.write(peca)
 
-        with st.spinner("Gerando parecer..."):
-            resposta = gerar_parecer(prompt)
+    # parecer IA
+    else:
 
-        st.subheader("📄 Parecer Jurídico")
+        try:
 
-        st.write(resposta)
+            prompt = f"""
+            Analise juridicamente o seguinte caso.
 
-# --------------------
-# JURISPRUDÊNCIA
-# --------------------
+            CASO:
+            {pergunta}
 
-with tab2:
+            LEGISLAÇÃO:
+            {legislacao}
 
-    tema = st.text_input("Tema jurídico")
+            JURISPRUDÊNCIA:
+            {jurisprudencia}
 
-    if st.button("Buscar jurisprudência"):
+            Estruture em:
 
-        resultado = buscar_jurisprudencia(tema)
+            1 análise jurídica
+            2 base legal
+            3 jurisprudência
+            4 conclusão
+            """
 
-        st.write(resultado)
+            resposta = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role":"system","content":"Você é um jurista especialista em direito brasileiro."},
+                    {"role":"user","content":prompt}
+                ]
+            )
 
-# --------------------
-# LEGISLAÇÃO
-# --------------------
+            st.subheader("⚖️ Parecer Jurídico")
 
-with tab3:
+            st.write(resposta.choices[0].message.content)
 
-    tema = st.text_input("Pesquisar legislação")
+        except:
 
-    if st.button("Buscar legislação"):
-
-        resultado = buscar_legislacao(tema)
-
-        st.write(resultado)
+            st.error("Erro ao consultar IA.")
