@@ -1,17 +1,16 @@
 import requests
 
-def buscar_jurisprudencia(tema):
+def buscar_legislacao(tema):
+
+    url = f"https://www.planalto.gov.br/busca/?q={tema}"
 
     try:
-
-        url = f"https://jurisprudencia.stj.jus.br/api/search?q={tema}"
-
         r = requests.get(url, timeout=5)
 
         if r.status_code == 200:
             return r.text[:2000]
 
-        return "Nenhuma jurisprudência encontrada."
+        return "Legislação não encontrada."
 
     except:
-        return "Erro ao buscar jurisprudência."
+        return "Erro ao buscar legislação."
