@@ -1,9 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
 
-# -------------------------------
-# CONFIGURAÇÃO DA PÁGINA
-# -------------------------------
+from busca_legislacao import buscar_legislacao
+from busca_jurisprudencia import buscar_jurisprudencia
+from leitor_pdf import ler_pdf
 
 st.set_page_config(
     page_title="DocSwift IA Jurídica",
@@ -11,85 +11,92 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("⚖️ DocSwift - Assistente Jurídico com IA")
+st.title("⚖️ DocSwift IA Jurídica")
 
-st.write("Sistema de análise jurídica assistido por inteligência artificial.")
+st.write("Assistente jurídico inteligente.")
 
-# -------------------------------
-# CONFIGURAR API
-# -------------------------------
-
-api_key = st.secrets.get("GOOGLE_API_KEY")
-
-if not api_key:
-    st.error("⚠️ API KEY não encontrada. Configure no secrets.toml.")
+# API
+try:
+    api_key = st.secrets["GOOGLE_API_KEY"]
+except:
+    st.error("Configure sua API KEY no Secrets.")
     st.stop()
 
 genai.configure(api_key=api_key)
 
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# -------------------------------
-# ENTRADA DO USUÁRIO
-# -------------------------------
-
-pergunta = st.text_area(
-    "Digite sua pergunta jurídica ou descreva seu caso:",
+# INPUT CASO
+caso = st.text_area(
+    "Descreva o caso jurídico:",
     height=200
 )
 
-# -------------------------------
+# UPLOAD PDF
+pdf = st.file_uploader(
+    "Enviar edital ou documento (PDF)",
+    type=["pdf"]
+)
+
+texto_pdf = ""
+
+if pdf:
+
+    texto_pdf = ler_pdf(pdf)
+
+    st.success("PDF carregado.")
+
 # BOTÃO
-# -------------------------------
+if st.button("Analisar caso"):
 
-if st.button("Gerar parecer jurídico"):
+    if not caso:
 
-    if not pergunta:
-        st.warning("Digite uma pergunta ou caso.")
+        st.warning("Digite o caso.")
+
     else:
 
-        with st.spinner("Analisando..."):
+        with st.spinner("Buscando legislação..."):
+
+            legislacao = buscar_legislacao(caso)
+
+        with st.spinner("Buscando jurisprudência..."):
+
+            jurisprudencia = buscar_jurisprudencia(caso)
+
+        with st.spinner("Gerando parecer..."):
 
             prompt = f"""
-            Você é um jurista especialista em direito brasileiro.
+Você é um jurista especialista em direito brasileiro.
 
-            Analise a situação abaixo.
+CASO:
+{caso}
 
-            CASO:
-            {pergunta}
+DOCUMENTO ANALISADO:
+{texto_pdf}
 
-            Estruture a resposta em:
+LEGISLAÇÃO:
+{legislacao}
 
-            1 - análise jurídica
-            2 - base legal aplicável
-            3 - jurisprudência relevante
-            4 - conclusão jurídica
-            """
+JURISPRUDÊNCIA:
+{jurisprudencia}
+
+Elabore um parecer jurídico completo contendo:
+
+1. análise dos fatos
+2. enquadramento legal
+3. jurisprudência relevante
+4. possibilidade de recurso
+5. conclusão jurídica
+"""
 
             resposta = model.generate_content(prompt)
 
-            st.subheader("📄 Parecer Jurídico")
+        st.subheader("Parecer Jurídico")
 
-            st.write(resposta.text)
+        st.write(resposta.text)
 
-            st.download_button(
-                "📥 Baixar parecer",
-                resposta.text,
-                file_name="parecer_juridico.txt"
-            )
-
-# -------------------------------
-# RODAPÉ
-# -------------------------------
-
-st.markdown("---")
-
-st.markdown(
-"""
-<div style="text-align:center;color:gray">
-⚖️ <b>DocSwift IA Jurídica</b> • 2026 <br>
-Assistente jurídico baseado em inteligência artificial
-</div>
-""",
-unsafe_allow_html=True
-)
+        st.download_button(
+            "Baixar parecer",
+            resposta.text,
+            file_name="parecer_docswift.txt"
+        )
