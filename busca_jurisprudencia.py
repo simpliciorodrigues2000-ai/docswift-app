@@ -1,16 +1,43 @@
 import requests
 
-def buscar_jurisprudencia(tema):
+def buscar_jurisprudencia(consulta):
 
     try:
-        url = f"https://jurisprudencia.stj.jus.br/api/search?q={tema}"
 
-        r = requests.get(url, timeout=5)
+        url = "https://jurisprudencia.stf.jus.br/api/search"
 
-        if r.status_code == 200:
-            return r.text[:2000]
+        params = {
+            "q": consulta,
+            "page": 1
+        }
 
-        return "Jurisprudência não encontrada."
+        response = requests.get(url, params=params, timeout=10)
 
-    except:
+        if response.status_code != 200:
+            return "Não foi possível buscar jurisprudência."
+
+        data = response.json()
+
+        if "results" not in data:
+            return "Nenhuma decisão encontrada."
+
+        resultados = data["results"][:3]
+
+        resposta = ""
+
+        for r in resultados:
+
+            resposta += f"""
+            Tribunal: STF
+            Processo: {r.get("processo","")}
+            Relator: {r.get("relator","")}
+            Ementa: {r.get("ementa","")}
+
+            -----------------------
+            """
+
+        return resposta
+
+    except Exception:
+
         return "Erro ao buscar jurisprudência."
